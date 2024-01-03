@@ -8,7 +8,7 @@ export interface TreeDataWrap {
 export interface TreeData {
   key: string
   title: ReactNode
-  children: TreeData[]
+  children: TreeData[] | null
 }
 
 export interface Condition {

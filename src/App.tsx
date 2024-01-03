@@ -1,81 +1,125 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Form, Input, Tree } from 'antd'
+import { Button, Col, Form, Input, Layout, List, Row, Space, Tooltip, Tree, Typography } from 'antd'
+import { XMLParser } from 'fast-xml-parser'
+import jp from 'jsonpath'
 import { useState } from 'react'
 
-import { XMLParser } from 'fast-xml-parser'
 import { initialForm } from './constants/constants'
 import { toTreeData } from './utils/transform'
-import { TreeData } from './types'
-// import { TreeData, toTreeData } from './utils/transform'
+import { CheckCircleTwoTone, CloseCircleTwoTone, PlusOutlined } from '@ant-design/icons'
+import type { DataNode } from 'antd/es/tree'
 
+const { Content } = Layout
 const { TextArea } = Input
+const { Title, Text } = Typography
 
 type FormProps = {
   rawXml: string
 }
+
 function App() {
+  // const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+  const [jsonPaths, setJsonPaths] = useState<any[]>([])
+  const [rawJson, setRawJson] = useState<any>({})
+  const [treeData, setTreeData] = useState<DataNode[]>([])
 
-  // const [conditions, setConditions] = useState<Condition[]>([
-  //   {
-  //     //key: 'TransactionLogLookupResponse.LogDocuments.Transaction.RetailTransaction.LineItem.OperatorBypassApproval.PolicyRuleManager.Policy.PolicyRule.BusinessAction',
-  //     key: 'TransactionLogLookupResponse.LogDocuments.Transaction.RetailTransaction',
-  //     operator: 'contain',
-  //     value: ''
-  //   }
-  // ])
-  const [treeData, setTreeData] = useState<TreeData[]>([])
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleFormValueChange = (args: FormProps) => {
-    const options = {
-      ignoreAttributes: false,
-      attributeNamePrefix: "@_",
-      allowBooleanAttributes: true,
-    };
-    const parser = new XMLParser(options)
-    const rawJson = parser.parse(args.rawXml)
-
-    const treeData = toTreeData(markMatched(rawJson))
-    setTreeData(treeData)
+  const renderTitle = (titleData: any) => {
+    const { text, path, isArray } = titleData
+    const index = jsonPaths.findIndex((jsonPath) => jsonPath.path === path)
+    if (index > 0) {
+      console.log('jsonPaths', jsonPaths)
+      console.log('path', path)
+      console.log('index', index)
+    }
+    return <div>
+      <Space>
+        <Tooltip title={path}>
+          <Text style={{ color: isArray > 0 ? 'orange' : 'green' }}>{text}</Text>
+          {/* <Tag color={isArray > 0 ? 'orange' : 'green'} icon={isArray ? <OrderedListOutlined /> : <FileOutlined />}>{text}</Tag> */}
+        </Tooltip>
+        <Button
+          type='text'
+          size='small'
+          onClick={() => handleMoreButton(path)}
+        >
+          <PlusOutlined />
+        </Button>
+      </Space>
+    </div>
   }
 
-  const markMatched = (rawJson: any) => {
-    // conditions.forEach((condition: Condition) => {
-    //   const paths = condition.key.split('.')
-    //   let pointer = rawJson
-    //   paths.forEach((path: string) => {
-    //     // console.log('path', path, typeof pointer[path], pointer[path])
-    //     if (typeof pointer[path] === 'object') {
-    //       pointer = pointer[path]
-    //       console.log('pointer', pointer)
-    //       pointer.matched = true
-    //       // if (Array.isArray(pointer[path])) {
-    //       //   pointer[path].forEach((element:any)=>{
-    //       //     element[path]
-    //       //   })
-    //       // }
-    //     }// else if (typeof pointer[path])
-    //   })
-    // })
-    return rawJson
+  const handleMoreButton = (path: string) => {
+    console.log('rawJson', rawJson)
+    const matched = jp.query(rawJson, path).length > 0
+    setJsonPaths(current => [...current, { path, matched }])
+  }
+
+  const handleParseXML = (args: FormProps) => {
+    const options = {
+      ignoreAttributes: false,
+      attributeNamePrefix: "Attr_",
+      allowBooleanAttributes: true,
+      removeNSPrefix: true,
+      textNodeName: 'Txt_'
+    };
+    const xmlParser = new XMLParser(options)
+    const rawJson = xmlParser.parse(args.rawXml)
+    setRawJson(rawJson)
+    console.log(rawJson)
+
+    console.log('query', jp.query(rawJson, "$.TransactionLogLookupResponse.LogDocuments.Transaction.RetailTransaction.LineItem[*].OperatorBypassApproval[*].PolicyRuleManager.Policy.PolicyRule.BusinessAction[?(@.Attribute_IsApproved=='Yes' && @.Attribute_ActionType == 'AgeConfirmation')]"))
+    console.log('query', jp.query(rawJson, "$.TransactionLogLookupResponse.LogDocuments.Transaction.RetailTransaction.LineItem[*].OperatorBypassApproval[*].PolicyRuleManager.Policy.PolicyRule[?(@.Attribute_IsApproved=='Yes' && @.Attribute_ActionType == 'AgeConfirmation')]"))
+    const treeData = toTreeData(rawJson, renderTitle)
+    setTreeData(treeData.treeDatas)
+
+    // setExpandedKeys(treeData.keys)
+  }
+
+  const handleDelete = (removePath: string) => {
+    setJsonPaths(jsonPaths.filter(jsonPath => jsonPath !== removePath))
   }
 
   return (
-    <>
-      <Form
-        initialValues={initialForm}
-        layout='vertical'
-        onValuesChange={handleFormValueChange}
-      >
-        <Form.Item label="Raw XML" name="rawXml">
-          <TextArea rows={4} />
-        </Form.Item>
-      </Form>
-      <Tree
-        showLine
-        treeData={treeData}
-      />
-    </>
+    <Layout>
+      <Content style={{ height: '100vh', padding: 8 }}>
+        <Title>XML Mapper</Title>
+        <Row gutter={8}>
+          <Col span={12} >
+            <div style={{ marginBottom: 8 }}>
+              <Text>Input XML</Text>
+            </div>
+            <Form
+              initialValues={initialForm}
+              layout='vertical'
+              onFinish={handleParseXML}
+            >
+              <Form.Item name="rawXml">
+                <TextArea rows={4} />
+              </Form.Item>
+              <Button type="primary" htmlType="submit">Parse XML</Button>
+            </Form>
+            <div style={{ marginBottom: 8 }}>
+              <Text>XML Tree</Text>
+            </div>
+            <Tree showLine treeData={treeData} />
+          </Col>
+          <Col span={12}>
+            <div style={{ marginBottom: 8 }}>
+              <Text>JSON Path</Text>
+            </div>
+            <List
+              dataSource={jsonPaths}
+              renderItem={(jsonPath) => (
+                <List.Item>
+                  <Text>{jsonPath.matched ? <CheckCircleTwoTone twoToneColor='#52c41a' /> : <CloseCircleTwoTone twoToneColor='#eb2f96' />} {jsonPath.path}</Text>
+                  <Button size='small' onClick={() => handleDelete(jsonPath)}>Delete</Button>
+                </List.Item>
+              )}
+            />
+          </Col>
+        </Row>
+      </Content>
+    </Layout>
   )
 }
 

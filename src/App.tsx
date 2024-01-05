@@ -22,6 +22,7 @@ function App() {
   const [jsonPaths, setJsonPaths] = useState<any[]>([])
   const [rawJson, setRawJson] = useState<any>({})
   const [treeData, setTreeData] = useState<DataNode[]>([])
+  const [output, setOutput] = useState<DataNode[]>([])
 
   const renderTitle = (titleData: any) => {
     const { text, path, isArray } = titleData
@@ -60,7 +61,7 @@ function App() {
       attributeNamePrefix: "Attr_",
       allowBooleanAttributes: true,
       removeNSPrefix: true,
-      textNodeName: 'Txt_'
+      textNodeName: 'Text'
     };
     const xmlParser = new XMLParser(options)
     const rawJson = xmlParser.parse(args.rawXml)
@@ -86,7 +87,7 @@ function App() {
         <Row gutter={8}>
           <Col span={12} >
             <div style={{ marginBottom: 8 }}>
-              <Text>Input XML</Text>
+              <Text strong>Input XML</Text>
             </div>
             <Form
               initialValues={initialForm}
@@ -99,13 +100,13 @@ function App() {
               <Button type="primary" htmlType="submit">Parse XML</Button>
             </Form>
             <div style={{ marginBottom: 8 }}>
-              <Text>XML Tree</Text>
+              <Text strong>XML Tree</Text>
             </div>
             <Tree showLine treeData={treeData} />
           </Col>
           <Col span={12}>
             <div style={{ marginBottom: 8 }}>
-              <Text>JSON Path</Text>
+              <Text strong>JSON Path</Text>
             </div>
             <List
               dataSource={jsonPaths}
@@ -116,6 +117,15 @@ function App() {
                 </List.Item>
               )}
             />
+            <div style={{ marginBottom: 8 }}>
+              <Text strong>Query</Text>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <Text strong>Projection</Text>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <Text strong>Output</Text>
+            </div>
           </Col>
         </Row>
       </Content>

@@ -2,6 +2,19 @@
 import { ReactNode } from 'react'
 import type { DataNode } from 'antd/es/tree'
 
+export const toDataNote = function (datas: object, parent: string): DataNode[] {
+  const dataNotes: DataNode[] = []
+  for (const [tag, value] of Object.entries(datas)) {
+    const path = `${parent}.${tag}`
+    if (typeof value === 'object') {
+      dataNotes.push({ key: path, title: 'Title', children: toDataNote(value, path) })
+    } else {
+      dataNotes.push({ key: path, title: 'Title', children: undefined })
+    }
+  }
+  return dataNotes
+}
+
 export const toTreeData = (datas: object, renderTitle: (titleData: any) => ReactNode, parentReal: string = '', parentSearch: string = '', parentIsArray: boolean = false) => {
   let keys: string[] = []
   const treeDatas: DataNode[] = []
